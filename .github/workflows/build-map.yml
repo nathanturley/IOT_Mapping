@@ -79,16 +79,11 @@ jobs:
             --out routes_map.html \
             --password "$MAP_PASSWORD"
 
-      - name: Commit and push routes_map.html if changed
+      - name: Commit and push routes_map.html
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Only add/commit if the file actually changed
-          if git status --porcelain routes_map.html | grep .; then
-            git add routes_map.html
-            git commit -m "Update routes_map.html"
-            git push
-          else
-            echo "No changes to routes_map.html"
-          fi
+          
+          git add routes_map.html
+          git diff --staged --quiet || git commit -m "Update routes_map.html [skip ci]"
+          git push
