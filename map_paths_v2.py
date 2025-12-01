@@ -755,11 +755,15 @@ def make_map(devices: pd.DataFrame,
 
   // Initialize map with data
   function initializeMap() {
-    // Wait for the DOM and map to be ready
-    if (!document.getElementById('searchContainer')) {
+    console.log('initializeMap called');
+    // Wait for the DOM and map to be ready - check if Folium map exists
+    var mapContainer = document.querySelector('.folium-map');
+    if (!mapContainer || !window[mapContainer.id]) {
+      console.log('Map not ready yet, waiting...');
       setTimeout(initializeMap, 100);
       return;
     }
+    console.log('Map is ready, initializing...');
 
     // Create set of offline node IDs for quick lookup
     var offlineNodeIdsSet = new Set();
