@@ -610,7 +610,7 @@ def make_map(devices: pd.DataFrame,
   var isEncrypted = __IS_ENCRYPTED__;
   var offlineNodes = __OFFLINE_NODES_JSON__;
   var offlineNodeIds = __OFFLINE_NODE_IDS_JSON__;
-  var mapObj = __MAP_NAME__;
+  var mapObj = null;  // Will be set dynamically when map is ready
 
   // Global variables for decrypted data
   var devices = null;
@@ -764,6 +764,10 @@ def make_map(devices: pd.DataFrame,
       return;
     }
     console.log('Map is ready, initializing...');
+    
+    // Get the actual map object from Folium
+    mapObj = window[mapContainer.id];
+    console.log('Map object acquired:', mapObj);
 
     // Create set of offline node IDs for quick lookup
     var offlineNodeIdsSet = new Set();
