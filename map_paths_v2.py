@@ -705,10 +705,16 @@ def make_map(devices: pd.DataFrame,
 
   // Check for existing session on page load
   function checkAuth() {
+    console.log('=== checkAuth called ===');
+    console.log('isEncrypted:', isEncrypted);
+    console.log('Modal element:', document.getElementById('loginModal'));
+    
     let storedAuth = localStorage.getItem('mapAuth') || sessionStorage.getItem('mapAuth');
+    console.log('storedAuth:', storedAuth);
     
     if (storedAuth && isEncrypted) {
       // Try to auto-login with stored password
+      console.log('Attempting auto-login...');
       try {
         let password = atob(storedAuth);
         let devicesJson = deobfuscate(encryptedDevices, password);
@@ -718,11 +724,13 @@ def make_map(devices: pd.DataFrame,
         edges = JSON.parse(edgesJson);
         
         // Success! Show map without login prompt
+        console.log('Auto-login successful');
         document.getElementById('logoutBtn').style.display = 'block';
         initializeMap();
         return;
       } catch (e) {
         // Stored password is invalid/stale, clear it
+        console.log('Auto-login failed:', e);
         localStorage.removeItem('mapAuth');
         sessionStorage.removeItem('mapAuth');
       }
@@ -730,10 +738,15 @@ def make_map(devices: pd.DataFrame,
     
     // No valid session - show login or use plain data
     if (isEncrypted) {
-      document.getElementById('loginModal').style.display = 'flex';
+      console.log('Showing login modal...');
+      let modal = document.getElementById('loginModal');
+      console.log('Modal before display change:', modal, 'display:', modal ? modal.style.display : 'null');
+      modal.style.display = 'flex';
+      console.log('Modal after display change:', modal.style.display);
       setTimeout(() => document.getElementById('mapPassword').focus(), 100);
     } else {
       // No encryption, parse data directly
+      console.log('No encryption, loading data directly');
       devices = JSON.parse(encryptedDevices);
       edges = JSON.parse(encryptedEdges);
       initializeMap();
