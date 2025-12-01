@@ -965,8 +965,12 @@ def make_map(devices: pd.DataFrame,
   renderOfflineNodes();
   } // End initializeMap
 
-  // Start auth check when page loads
-  checkAuth();
+  // Start auth check when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkAuth);
+  } else {
+    checkAuth();
+  }
 
 </script>
 """
