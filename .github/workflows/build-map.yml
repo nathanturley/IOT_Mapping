@@ -19,7 +19,6 @@ jobs:
       - name: Check out data from private repo
         uses: actions/checkout@v4
         with:
-          repository: YOUR_USERNAME/YOUR_PRIVATE_REPO
           token: ${{ secrets.DATA_REPO_PAT }}
           path: data
 
@@ -48,7 +47,7 @@ jobs:
         run: |
           # Download CSV files using raw.githubusercontent.com
           # Replace YOUR_USERNAME and YOUR_PRIVATE_REPO with your actual values
-          PRIVATE_REPO="YOUR_USERNAME/YOUR_PRIVATE_REPO"
+          PRIVATE_REPO="nathanturley/IOT_Mapping_Data"
           BRANCH="main"
           
           curl -H "Authorization: token ${{ secrets.DATA_REPO_PAT }}" \
