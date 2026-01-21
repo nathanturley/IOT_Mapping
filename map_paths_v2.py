@@ -1049,7 +1049,7 @@ def main():
     if missing > 0:
         involved_ids = set(edges["frm"]).union(set(edges["to"]))
         known_ids = set(devices.index)
-        missing_ids = sorted([i for i in involved_ids if i not in known_ids])
+        missing_ids = sorted(str(i) for i in involved_ids if pd.notna(i) and i not in known_ids)
         print(f"WARNING: {missing} edges dropped due to missing coordinates.")
         if len(missing_ids) <= 50:
             print("Missing device IDs:", ", ".join(missing_ids))
