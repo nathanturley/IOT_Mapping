@@ -439,6 +439,24 @@ def make_map(devices: pd.DataFrame,
   #logoutBtn:hover {
     background: #d32f2f;
   }
+  #timestampContainer {
+    position: absolute;
+    top: 10px;
+    right: 280px;
+    z-index: 1000;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    height: 32px;
+    box-sizing: border-box;
+  }
+  #timestampContainer strong {
+    margin-right: 6px;
+  }
   #searchContainer {
     position: absolute;
     top: 10px;
@@ -571,6 +589,11 @@ def make_map(devices: pd.DataFrame,
 </div>
 
 <button id="logoutBtn" style="display: none;" onclick="logout()">Logout</button>
+
+<div id="timestampContainer">
+  <strong>Last Updated:</strong>
+  <span id="lastUpdated"></span>
+</div>
 
 <div id="searchContainer">
   <input id="nodeSearch" type="text"
@@ -984,6 +1007,18 @@ def make_map(devices: pd.DataFrame,
   }
   
   renderOfflineNodes();
+  
+  // Set last updated timestamp
+  var now = new Date();
+  var formatted = now.toLocaleString('en-NZ', { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit',
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false
+  });
+  document.getElementById('lastUpdated').textContent = formatted;
   } // End initializeMap
 
   // Start auth check when DOM is ready
