@@ -425,7 +425,7 @@ def make_map(devices: pd.DataFrame,
   #logoutBtn {
     position: absolute;
     top: 10px;
-    left: 280px;
+    left: 50px;
     z-index: 1000;
     background: #f44336;
     color: white;
@@ -483,7 +483,7 @@ def make_map(devices: pd.DataFrame,
     padding: 10px;
     border-radius: 4px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    max-height: 300px;
+    max-height: 400px;
     width: 280px;
     overflow: hidden;
     font-size: 12px;
@@ -495,7 +495,7 @@ def make_map(devices: pd.DataFrame,
     color: #d32f2f;
   }
   #offlineList {
-    max-height: 300px;
+    max-height: 380px;
     overflow-y: auto;
   }
   .offline-item {
