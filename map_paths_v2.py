@@ -41,6 +41,7 @@ import re
 from typing import List, Tuple
 import json
 import base64
+from datetime import datetime
 
 import pandas as pd
 import folium
@@ -238,7 +239,8 @@ def make_map(devices: pd.DataFrame,
              center_id: str = None,
              zoom_start: int = 9,
              offline_nodes: List[Tuple[str, str]] = None,
-             password: str = None):
+             password: str = None,
+             scrape_timestamp: datetime = None):
 
     # Determine map centre
     if center_id and center_id.upper() in devices.index:
@@ -1008,9 +1010,9 @@ def make_map(devices: pd.DataFrame,
   
   renderOfflineNodes();
   
-  // Set last updated timestamp
-  var now = new Date();
-  var formatted = now.toLocaleString('en-NZ', { 
+  // Set last updated timestamp from scrape time
+  var scrapeTime = new Date('__SCRAPE_TIMESTAMP__');
+  var formatted = scrapeTime.toLocaleString('en-NZ', { 
     year: 'numeric', 
     month: '2-digit', 
     day: '2-digit',
@@ -1031,6 +1033,11 @@ def make_map(devices: pd.DataFrame,
 </script>
 """
 
+    # Convert scrape timestamp to ISO format for JavaScript
+    if scrape_timestamp is None:
+        scrape_timestamp = datetime.now()
+    timestamp_iso = scrape_timestamp.isoformat()
+    
     # Replace placeholders with actual JSON/map name
     search_html = (search_html
                    .replace("__DEVICES_JSON__", devices_json)
@@ -1038,7 +1045,8 @@ def make_map(devices: pd.DataFrame,
                    .replace("__IS_ENCRYPTED__", is_encrypted)
                    .replace("__OFFLINE_NODES_JSON__", offline_nodes_json)
                    .replace("__OFFLINE_NODE_IDS_JSON__", offline_node_ids_json)
-                   .replace("__MAP_NAME__", map_name))
+                   .replace("__MAP_NAME__", map_name)
+                   .replace("__SCRAPE_TIMESTAMP__", timestamp_iso))
 
     m.get_root().html.add_child(folium.Element(search_html))
     m.save(out_html)
@@ -1117,7 +1125,8 @@ def main():
              center_id=args.center_id,
              zoom_start=args.zoom_start,
              offline_nodes=offline_nodes,
-             password=args.password)
+             password=args.password,
+             scrape_timestamp=datetime.now())
 
 
 if __name__ == "__main__":

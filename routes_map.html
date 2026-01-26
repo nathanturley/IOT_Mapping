@@ -715,9 +715,19 @@
   
   renderOfflineNodes();
   
-  // Set last updated timestamp
-  var now = new Date();
-  var formatted = now.toLocaleString('en-NZ', { 
+  // Set last updated timestamp from the most recent edge timestamp
+  var latestTimestamp = null;
+  edges.forEach(function(e) {
+    if (e.timestamp) {
+      var ts = new Date(e.timestamp);
+      if (!latestTimestamp || ts > latestTimestamp) {
+        latestTimestamp = ts;
+      }
+    }
+  });
+  
+  var displayTime = latestTimestamp || new Date();
+  var formatted = displayTime.toLocaleString('en-NZ', { 
     year: 'numeric', 
     month: '2-digit', 
     day: '2-digit',
