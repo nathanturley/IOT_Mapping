@@ -42,10 +42,14 @@ from typing import List, Tuple
 import json
 import base64
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import folium
 import thingsboard_scraper
+
+
+NZ_TZ = ZoneInfo("Pacific/Auckland")
 
 
 def obfuscate_data(data_string: str, password: str) -> str:
@@ -1013,6 +1017,7 @@ def make_map(devices: pd.DataFrame,
   // Set last updated timestamp from scrape time
   var scrapeTime = new Date('__SCRAPE_TIMESTAMP__');
   var formatted = scrapeTime.toLocaleString('en-NZ', { 
+    timeZone: 'Pacific/Auckland',
     year: 'numeric', 
     month: '2-digit', 
     day: '2-digit',
@@ -1035,7 +1040,12 @@ def make_map(devices: pd.DataFrame,
 
     # Convert scrape timestamp to ISO format for JavaScript
     if scrape_timestamp is None:
-        scrape_timestamp = datetime.now()
+      scrape_timestamp = datetime.now(NZ_TZ)
+    elif scrape_timestamp.tzinfo is None:
+      # Interpret naive timestamps as Pacific/Auckland to avoid DST shifts.
+      scrape_timestamp = scrape_timestamp.replace(tzinfo=NZ_TZ)
+    else:
+      scrape_timestamp = scrape_timestamp.astimezone(NZ_TZ)
     timestamp_iso = scrape_timestamp.isoformat()
     
     # Replace placeholders with actual JSON/map name
@@ -1126,7 +1136,7 @@ def main():
              zoom_start=args.zoom_start,
              offline_nodes=offline_nodes,
              password=args.password,
-             scrape_timestamp=datetime.now())
+             scrape_timestamp=datetime.now(NZ_TZ))
 
 
 if __name__ == "__main__":
