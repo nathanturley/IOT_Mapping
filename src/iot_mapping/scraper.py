@@ -1,3 +1,14 @@
+"""
+Scrape a ThingsBoard public dashboard to find which IoT nodes are offline.
+
+ThingsBoard renders its dashboards with JavaScript, so we use Selenium to
+load the page in a headless browser and then parse the rendered HTML.
+
+The CSS class names below (n_value, n_card, m_content, n2_valueSmall) are
+specific to the ThingsBoard dashboard layout. If the dashboard is redesigned,
+these selectors will need updating.
+"""
+
 import logging
 import time
 
@@ -28,6 +39,8 @@ def get_offline_nodes(
     chrome_options = Options()
     if headless:
         chrome_options.add_argument("--headless")
+
+    # Required for running in CI / Docker where there's no display
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
@@ -37,6 +50,7 @@ def get_offline_nodes(
     driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.set_page_load_timeout(30)
 
+    # Retry page load — ThingsBoard can be slow / flaky
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             driver.get(url)
@@ -48,12 +62,14 @@ def get_offline_nodes(
             logger.warning("Timeout loading page, retrying (%d/%d)...", attempt, MAX_RETRIES)
 
     try:
+        # Wait for JS-rendered content to appear in the DOM
         logger.info("Waiting %d seconds for page to render...", wait_time)
         time.sleep(wait_time)
 
         soup = BeautifulSoup(driver.page_source, "html.parser")
         results = []
 
+        # Each device card has a status block with class "n_value"
         offline_blocks = soup.find_all("div", class_="n_value")
         logger.debug("Found %d status blocks", len(offline_blocks))
 
@@ -62,14 +78,17 @@ def get_offline_nodes(
             if status_text != "Offline":
                 continue
 
+            # Walk up to the parent card that contains this status block
             card = block.find_parent("div", class_="n_card")
             if not card:
                 logger.warning("Could not find parent card for offline block")
                 continue
 
+            # Device name is the first text node inside the .m_content div
             name_elem = card.find("div", class_="m_content")
             name = name_elem.contents[0].strip() if name_elem and name_elem.contents else "Unknown"
 
+            # Node ID is inside .n2_valueSmall, in the format "Node ID: XXX Type: YYY"
             small = card.find("div", class_="n2_valueSmall")
             if not small:
                 logger.warning("Could not find node ID for %s", name)
@@ -92,6 +111,7 @@ def get_offline_nodes(
 
 
 def main() -> None:
+    """Run the scraper standalone to test offline node detection."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     offline_nodes = get_offline_nodes(THINGSBOARD_DASHBOARD_URL)
     for name, nid in offline_nodes:

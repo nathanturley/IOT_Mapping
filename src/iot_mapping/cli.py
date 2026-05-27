@@ -1,3 +1,10 @@
+"""
+Command-line entry point for the IoT mapping tool.
+
+This is the main orchestrator — it loads data, fetches offline status,
+and calls the map builder to produce the final HTML file.
+"""
+
 import argparse
 import logging
 import os
@@ -40,20 +47,21 @@ def main() -> None:
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
+    # Step 1: Load device coordinates and optional labels
     devices = load_devices(args.devices)
 
     if args.labels:
         labels = load_labels(args.labels)
+        # Left join keeps all devices, adds DeviceName/Location where available
         devices = devices.join(labels[["DeviceName", "Location"]], how="left")
 
+    # Step 2: Load path log and convert hop sequences into edges
     paths = load_paths(args.paths, sample=args.sample, sep_mode=args.sep)
     edges = build_edges(paths)
     edges_xy = add_coords(edges, devices)
 
-    # Diagnostics for missing coordinates
-    total_edges = len(edges)
-    edges_with_xy = len(edges_xy)
-    missing = total_edges - edges_with_xy
+    # Warn about edges we couldn't place on the map (device not in coordinates file)
+    missing = len(edges) - len(edges_xy)
     if missing > 0:
         involved_ids = set(edges["frm"]).union(set(edges["to"]))
         known_ids = set(devices.index)
@@ -64,7 +72,7 @@ def main() -> None:
         else:
             logger.warning("%d device IDs lack coordinates (not listed).", len(missing_ids))
 
-    # Fetch offline nodes from ThingsBoard
+    # Step 3: Scrape ThingsBoard for offline nodes (skippable for local testing)
     offline_nodes = None
     if not args.skip_offline:
         try:
@@ -83,6 +91,7 @@ def main() -> None:
             logger.exception("Failed to fetch offline nodes")
             offline_nodes = None
 
+    # Step 4: Build the map and write the HTML file
     make_map(
         devices,
         edges_xy,

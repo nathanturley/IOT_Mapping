@@ -1,14 +1,30 @@
-// Injected by Python at build time
+// ===========================================================================
+// Map application — injected into the generated HTML at build time.
+//
+// Placeholders like __DEVICES_JSON__ are replaced by Python with real data
+// before the HTML is saved. The user's browser then handles everything:
+// password auth, decryption, rendering edges/markers, and search.
+// ===========================================================================
+
+// --- Data injected by Python (placeholders replaced at build time) ---
 var encryptedDevices = "__DEVICES_JSON__";
 var encryptedEdges = "__EDGES_JSON__";
 var isEncrypted = __IS_ENCRYPTED__;
 var offlineNodes = __OFFLINE_NODES_JSON__;
 var offlineNodeIds = __OFFLINE_NODE_IDS_JSON__;
-var mapObj = null;
 
-var devices = null;
-var edges = null;
+var mapObj = null;   // Leaflet map instance (set once map is ready)
+var devices = null;  // Decrypted device array
+var edges = null;    // Decrypted edge array
 
+// ===========================================================================
+// Authentication — XOR decrypt, login/logout, session persistence
+// ===========================================================================
+
+/**
+ * Reverse the Python XOR obfuscation.
+ * Decodes base64, then XORs each byte with the cycling password.
+ */
 function deobfuscate(base64Data, password) {
   var encrypted = atob(base64Data);
   var encoder = new TextEncoder();
@@ -21,6 +37,7 @@ function deobfuscate(base64Data, password) {
   return decrypted;
 }
 
+/** Try to decrypt data with the entered password. */
 function attemptLogin() {
   var password = document.getElementById("mapPassword").value;
   var remember = document.getElementById("rememberMe").checked;
@@ -33,15 +50,13 @@ function attemptLogin() {
   }
 
   try {
-    var devicesJson = deobfuscate(encryptedDevices, password);
-    var edgesJson = deobfuscate(encryptedEdges, password);
+    // If the password is wrong, JSON.parse will fail on the garbled output
+    devices = JSON.parse(deobfuscate(encryptedDevices, password));
+    edges = JSON.parse(deobfuscate(encryptedEdges, password));
 
-    devices = JSON.parse(devicesJson);
-    edges = JSON.parse(edgesJson);
-
-    var authToken = btoa(password);
+    // Store password so the user doesn't have to re-enter it on refresh
     var storage = remember ? localStorage : sessionStorage;
-    storage.setItem("mapAuth", authToken);
+    storage.setItem("mapAuth", btoa(password));
 
     document.getElementById("loginModal").style.display = "none";
     document.getElementById("logoutBtn").style.display = "block";
@@ -60,52 +75,60 @@ function logout() {
   location.reload();
 }
 
+// Submit password on Enter key
 document.addEventListener("DOMContentLoaded", function () {
   var passwordInput = document.getElementById("mapPassword");
   if (passwordInput) {
     passwordInput.addEventListener("keypress", function (e) {
-      if (e.key === "Enter") {
-        attemptLogin();
-      }
+      if (e.key === "Enter") attemptLogin();
     });
   }
 });
 
+/**
+ * On page load: try to auto-login from a stored session,
+ * show the login modal if encrypted, or load data directly if not.
+ */
 function checkAuth() {
   var storedAuth = localStorage.getItem("mapAuth") || sessionStorage.getItem("mapAuth");
 
+  // Try auto-login with previously stored password
   if (storedAuth && isEncrypted) {
     try {
       var password = atob(storedAuth);
-      var devicesJson = deobfuscate(encryptedDevices, password);
-      var edgesJson = deobfuscate(encryptedEdges, password);
-
-      devices = JSON.parse(devicesJson);
-      edges = JSON.parse(edgesJson);
+      devices = JSON.parse(deobfuscate(encryptedDevices, password));
+      edges = JSON.parse(deobfuscate(encryptedEdges, password));
 
       document.getElementById("logoutBtn").style.display = "block";
       initializeMap();
       return;
     } catch (e) {
+      // Stored password is stale — clear it and show login
       localStorage.removeItem("mapAuth");
       sessionStorage.removeItem("mapAuth");
     }
   }
 
   if (isEncrypted) {
-    var modal = document.getElementById("loginModal");
-    modal.style.display = "flex";
+    // Show login modal
+    document.getElementById("loginModal").style.display = "flex";
     setTimeout(function () {
       document.getElementById("mapPassword").focus();
     }, 100);
   } else {
+    // No encryption — parse data directly
     devices = JSON.parse(encryptedDevices);
     edges = JSON.parse(encryptedEdges);
     initializeMap();
   }
 }
 
+// ===========================================================================
+// Map initialisation — edges, markers, click handlers
+// ===========================================================================
+
 function initializeMap() {
+  // Folium creates the map asynchronously — wait until it's ready
   var mapContainer = document.querySelector(".folium-map");
   if (!mapContainer || !window[mapContainer.id]) {
     setTimeout(initializeMap, 100);
@@ -114,49 +137,31 @@ function initializeMap() {
 
   mapObj = window[mapContainer.id];
 
+  // Build a quick-lookup set of offline node IDs
   var offlineNodeIdsSet = new Set();
   offlineNodeIds.forEach(function (id) {
     offlineNodeIdsSet.add(id.toUpperCase());
   });
 
-  var edgesByNode = {};
+  // --- Draw edges (lines between nodes) ---
+
+  var edgesByNode = {};  // nodeId -> [lines connected to that node]
   var allEdges = [];
   var maxEdgeCount = 0;
 
+  // Find the highest edge count (used to scale line thickness)
   edges.forEach(function (e) {
     if (typeof e.count === "number" && e.count > maxEdgeCount) {
       maxEdgeCount = e.count;
     }
   });
-  if (maxEdgeCount < 1) {
-    maxEdgeCount = 1;
-  }
+  if (maxEdgeCount < 1) maxEdgeCount = 1;
 
+  // Scale line weight logarithmically so high-count edges don't dominate
   function weightForCount(c) {
     c = c || 1;
-    if (maxEdgeCount <= 1) {
-      return 2;
-    }
+    if (maxEdgeCount <= 1) return 2;
     return 1 + 4 * (Math.log(1 + c) / Math.log(1 + maxEdgeCount));
-  }
-
-  function buildLabelElement(d) {
-    var container = document.createElement("span");
-
-    var nameText = document.createTextNode(d.DeviceName || d.ID);
-    container.appendChild(nameText);
-
-    if (d.Location) {
-      container.appendChild(document.createTextNode(" — " + d.Location));
-    }
-
-    var br = document.createElement("br");
-    container.appendChild(br);
-
-    var idText = document.createTextNode("ID: " + d.ID);
-    container.appendChild(idText);
-
-    return container;
   }
 
   edges.forEach(function (e) {
@@ -168,25 +173,29 @@ function initializeMap() {
       {
         color: "#3388ff",
         weight: w,
-        opacity: isOfflineEdge ? 0 : 0.5,
+        opacity: isOfflineEdge ? 0 : 0.5,  // Hide edges to offline nodes
       }
     );
+
+    // Store metadata on the line for highlighting later
     line.baseWeight = w;
     line.fromId = e.frm;
     line.toId = e.to;
     line.isOfflineEdge = isOfflineEdge;
+
     allEdges.push(line);
-    if (!edgesByNode[e.frm]) {
-      edgesByNode[e.frm] = [];
-    }
-    if (!edgesByNode[e.to]) {
-      edgesByNode[e.to] = [];
-    }
+
+    // Index edges by both endpoints so we can highlight all edges for a device
+    if (!edgesByNode[e.frm]) edgesByNode[e.frm] = [];
+    if (!edgesByNode[e.to]) edgesByNode[e.to] = [];
     edgesByNode[e.frm].push(line);
     edgesByNode[e.to].push(line);
+
     line.addTo(mapObj);
   });
 
+  // --- Connect Folium markers to our click handler ---
+  // Folium markers don't carry custom data, so we map lat/lng back to device ID
   var coordToDeviceId = {};
   devices.forEach(function (d) {
     if (d.Latitude && d.Longitude) {
@@ -200,23 +209,21 @@ function initializeMap() {
       layer.on("click", function () {
         var lat = this.getLatLng().lat.toFixed(6);
         var lng = this.getLatLng().lng.toFixed(6);
-        var key = lat + "," + lng;
-        var deviceId = coordToDeviceId[key];
-        if (deviceId) {
-          highlightDevice(deviceId);
-        }
+        var deviceId = coordToDeviceId[lat + "," + lng];
+        if (deviceId) highlightDevice(deviceId);
       });
     }
   });
+
+  // --- Edge highlighting (click a device to see its connections) ---
 
   var selectedId = null;
 
   function resetHighlight() {
     allEdges.forEach(function (line) {
-      var defaultOpacity = line.isOfflineEdge ? 0 : 0.5;
       line.setStyle({
         color: "#3388ff",
-        opacity: defaultOpacity,
+        opacity: line.isOfflineEdge ? 0 : 0.5,
         weight: line.baseWeight,
       });
     });
@@ -224,6 +231,7 @@ function initializeMap() {
   }
 
   function highlightDevice(idUpper) {
+    // Toggle off if clicking the same device again
     if (selectedId === idUpper) {
       resetHighlight();
       return;
@@ -231,12 +239,11 @@ function initializeMap() {
 
     resetHighlight();
     selectedId = idUpper;
+
+    // Highlight all edges connected to this device
     var lines = edgesByNode[idUpper] || [];
     lines.forEach(function (line) {
-      line.setStyle({
-        color: "#000000",
-        opacity: 0.9,
-      });
+      line.setStyle({ color: "#000000", opacity: 0.9 });
     });
   }
 
@@ -254,8 +261,24 @@ function initializeMap() {
     }
   }
 
+  // ===========================================================================
+  // Search — filter devices by ID, name, or location
+  // ===========================================================================
+
   var searchInput = document.getElementById("nodeSearch");
   var resultsDiv = document.getElementById("searchResults");
+
+  /** Build a search result label using safe DOM methods (no innerHTML with user data). */
+  function buildLabelElement(d) {
+    var container = document.createElement("span");
+    container.appendChild(document.createTextNode(d.DeviceName || d.ID));
+    if (d.Location) {
+      container.appendChild(document.createTextNode(" — " + d.Location));
+    }
+    container.appendChild(document.createElement("br"));
+    container.appendChild(document.createTextNode("ID: " + d.ID));
+    return container;
+  }
 
   function renderResults(matches) {
     resultsDiv.innerHTML = "";
@@ -263,9 +286,7 @@ function initializeMap() {
       var div = document.createElement("div");
       div.className = "search-result";
       div.appendChild(buildLabelElement(d));
-      div.onclick = function () {
-        focusOnDevice(d.ID_upper);
-      };
+      div.onclick = function () { focusOnDevice(d.ID_upper); };
       resultsDiv.appendChild(div);
     });
   }
@@ -281,9 +302,7 @@ function initializeMap() {
     var matches = [];
     devices.forEach(function (d) {
       var haystack = (d.ID + " " + (d.DeviceName || "") + " " + (d.Location || "")).toLowerCase();
-      if (haystack.indexOf(q) !== -1) {
-        matches.push(d);
-      }
+      if (haystack.indexOf(q) !== -1) matches.push(d);
     });
     renderResults(matches);
   }
@@ -291,6 +310,10 @@ function initializeMap() {
   searchInput.addEventListener("input", function () {
     filterDevices(this.value);
   });
+
+  // ===========================================================================
+  // Offline nodes panel
+  // ===========================================================================
 
   var offlineListDiv = document.getElementById("offlineList");
 
@@ -321,8 +344,7 @@ function initializeMap() {
       div.appendChild(idDiv);
 
       div.onclick = function () {
-        var deviceIdUpper = nodeId.toUpperCase().trim();
-        focusOnDevice(deviceIdUpper);
+        focusOnDevice(nodeId.toUpperCase().trim());
       };
 
       offlineListDiv.appendChild(div);
@@ -330,6 +352,10 @@ function initializeMap() {
   }
 
   renderOfflineNodes();
+
+  // ===========================================================================
+  // Timestamp — show when the offline data was last scraped
+  // ===========================================================================
 
   var scrapeTime = new Date("__SCRAPE_TIMESTAMP__");
   var formatted = scrapeTime.toLocaleString("en-NZ", {
@@ -343,6 +369,10 @@ function initializeMap() {
   });
   document.getElementById("lastUpdated").textContent = formatted;
 }
+
+// ===========================================================================
+// Bootstrap — kick off auth check when the page is ready
+// ===========================================================================
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", checkAuth);
