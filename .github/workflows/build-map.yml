@@ -66,6 +66,7 @@ jobs:
           PYTHONPATH: src
           CI: "true"
         run: |
+          mkdir -p output
           python -m iot_mapping \
             --paths paths.csv \
             --devices devices.csv \
