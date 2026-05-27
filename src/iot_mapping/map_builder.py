@@ -1,3 +1,11 @@
+"""
+Build the interactive Leaflet map HTML file.
+
+Combines a Folium base map with device markers, then injects the frontend
+templates (CSS, HTML, JS) with encrypted data baked in. The result is a
+single self-contained HTML file that handles auth and rendering client-side.
+"""
+
 import json
 import logging
 from datetime import datetime
@@ -16,6 +24,7 @@ TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "templates"
 
 
 def marker_style(dev_type: str, is_offline: bool = False) -> dict:
+    """Pick a FontAwesome icon and colour based on device type. Offline devices turn red."""
     t = str(dev_type).lower()
     for key, style in MARKER_STYLES.items():
         if key != "default" and key in t:
@@ -23,6 +32,25 @@ def marker_style(dev_type: str, is_offline: bool = False) -> dict:
             return {"icon": style["icon"], "color": color}
     fallback = MARKER_STYLES["default"]
     return {"icon": fallback["icon"], "color": OFFLINE_COLOR if is_offline else fallback["color"]}
+
+
+def _get_display_name(device_row) -> str:
+    """Use DeviceName if available, otherwise fall back to raw ID."""
+    name = device_row.get("DeviceName")
+    if isinstance(name, str) and name:
+        return name
+    return device_row["ID"]
+
+
+def _build_tooltip(device_row) -> str:
+    """Build the hover tooltip text shown on each map marker."""
+    name = _get_display_name(device_row)
+    loc = device_row.get("Location")
+    has_location = isinstance(loc, str) and loc
+
+    if has_location:
+        return f"{name} — {loc}<br>ID: {device_row['ID']}"
+    return f"{name}<br>ID: {device_row['ID']}"
 
 
 def make_map(
@@ -37,6 +65,9 @@ def make_map(
     password: str = None,
     scrape_timestamp: datetime = None,
 ) -> None:
+    """Generate the complete interactive map HTML and write it to out_html."""
+
+    # --- Centre the map on a specific device or the average of all devices ---
     if center_id and center_id.upper() in devices.index:
         ctr = [devices.loc[center_id.upper(), "Latitude"],
                devices.loc[center_id.upper(), "Longitude"]]
@@ -50,7 +81,9 @@ def make_map(
         prefer_canvas=True,
     )
 
-    # Aggregate or pass-through edges
+    # --- Prepare edge data ---
+    # Aggregate mode: group duplicate A->B edges and count them (most paths repeat).
+    # Non-aggregate mode: draw every individual path as a separate line.
     if aggregate:
         agg = (
             edges_with_coords
@@ -65,7 +98,7 @@ def make_map(
 
     edge_records = agg[["frm", "to", "lat_from", "lon_from", "lat_to", "lon_to", "count"]].to_dict(orient="records")
 
-    # Ensure DeviceName/Location columns exist
+    # --- Prepare device data for the JS frontend ---
     for col in ["DeviceName", "Location"]:
         if col not in devices.columns:
             devices[col] = ""
@@ -75,12 +108,13 @@ def make_map(
     ].fillna("")
     device_records = dev_df.to_dict(orient="records")
 
+    # Build a set of offline node IDs for quick lookup
     offline_node_ids = set()
     if offline_nodes:
         for _name, node_id in offline_nodes:
             offline_node_ids.add(node_id.upper().strip())
 
-    # Serialise and optionally encrypt data
+    # --- Encrypt data if a password was provided ---
     devices_json_plain = json.dumps(device_records)
     edges_json_plain = json.dumps(edge_records)
 
@@ -93,22 +127,14 @@ def make_map(
         edges_json = edges_json_plain
         is_encrypted = "false"
 
-    # Add device markers
+    # --- Add a marker to the map for each device ---
     for id_upper, d in devices.iterrows():
         is_offline = id_upper in offline_node_ids
         style = marker_style(d.get("Type", ""), is_offline)
 
-        name = d.get("DeviceName") if isinstance(d.get("DeviceName"), str) and d.get("DeviceName") else d["ID"]
-        loc = d.get("Location") if isinstance(d.get("Location"), str) and d.get("Location") else None
-
-        if loc:
-            tip = f"{name} — {loc}<br>ID: {d['ID']}"
-        else:
-            tip = f"{name}<br>ID: {d['ID']}"
-
         marker = folium.Marker(
             location=[d["Latitude"], d["Longitude"]],
-            tooltip=folium.Tooltip(tip),
+            tooltip=folium.Tooltip(_build_tooltip(d)),
             icon=folium.Icon(icon=style["icon"], color=style["color"], prefix="fa"),
         )
         marker.add_to(m)
@@ -116,7 +142,7 @@ def make_map(
     offline_nodes_json = json.dumps(offline_nodes if offline_nodes else [])
     offline_node_ids_json = json.dumps(list(offline_node_ids))
 
-    # Resolve scrape timestamp
+    # --- Resolve scrape timestamp to NZ time ---
     if scrape_timestamp is None:
         scrape_timestamp = datetime.now(NZ_TZ)
     elif scrape_timestamp.tzinfo is None:
@@ -125,7 +151,9 @@ def make_map(
         scrape_timestamp = scrape_timestamp.astimezone(NZ_TZ)
     timestamp_iso = scrape_timestamp.isoformat()
 
-    # Load frontend templates and inject data
+    # --- Load the frontend templates and inject data via placeholder replacement ---
+    # The templates use __PLACEHOLDER__ tokens that get swapped for real JSON here.
+    # The result is a self-contained HTML file with everything embedded.
     css = (TEMPLATES_DIR / "styles.css").read_text(encoding="utf-8")
     html = (TEMPLATES_DIR / "map_shell.html").read_text(encoding="utf-8")
     js = (TEMPLATES_DIR / "map_app.js").read_text(encoding="utf-8")
