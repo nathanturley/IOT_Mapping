@@ -1,0 +1,51 @@
+<div id="loginModal" style="display: none;">
+  <div id="loginBox">
+    <h2>Map Authentication</h2>
+    <p>Please enter the password to view this map.</p>
+    <input type="password" id="mapPassword" placeholder="Enter password" autocomplete="off" />
+    <div class="remember-me">
+      <input type="checkbox" id="rememberMe" />
+      <label for="rememberMe">Remember me on this device</label>
+    </div>
+    <button onclick="attemptLogin()">Login</button>
+    <div id="loginError">Incorrect password. Please try again.</div>
+  </div>
+</div>
+
+<button id="logoutBtn" style="display: none;" onclick="logout()">Logout</button>
+
+<div id="timestampContainer">
+  <strong>Last Updated:</strong>
+  <span id="lastUpdated"></span>
+</div>
+
+<div id="searchContainer">
+  <input id="nodeSearch" type="text"
+         placeholder="Search by ID, name, location" />
+  <div id="searchResults"></div>
+</div>
+
+<div id="offlineContainer">
+  <h4>Offline Nodes</h4>
+  <div id="offlineList"></div>
+</div>
+
+<div id="legend">
+  <h4>Legend</h4>
+  <div class="legend-item">
+    <div class="legend-icon purple"><i class="fa fa-cloud"></i></div>
+    <span>Gateways</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-icon pink"><i class="fa fa-exchange"></i></div>
+    <span>Repeaters</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-icon blue"><i class="fa fa-tint"></i></div>
+    <span>Water Tanks</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-icon green"><i class="fa fa-tint"></i></div>
+    <span>Stream Sensors</span>
+  </div>
+</div>

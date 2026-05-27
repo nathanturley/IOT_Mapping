@@ -4,6 +4,7 @@ __pycache__/
 *.csv
 *.xlsx
 *.html
+!templates/*.html
 .env
 output/
 !output/.gitkeep
