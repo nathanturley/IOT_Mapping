@@ -1,0 +1,255 @@
+#loginModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+#loginBox {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 90%;
+}
+
+#loginBox h2 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 24px;
+}
+
+#loginBox p {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+#loginBox input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+
+#loginBox input[type="password"]:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+#loginBox button {
+  width: 100%;
+  padding: 12px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+#loginBox button:hover {
+  background: #45a049;
+}
+
+#loginBox .remember-me {
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #666;
+}
+
+#loginBox .remember-me input {
+  margin-right: 8px;
+}
+
+#loginError {
+  color: #d32f2f;
+  font-size: 14px;
+  margin-top: 10px;
+  display: none;
+}
+
+#logoutBtn {
+  position: absolute;
+  top: 10px;
+  left: 50px;
+  z-index: 1000;
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+#logoutBtn:hover {
+  background: #d32f2f;
+}
+
+#timestampContainer {
+  position: absolute;
+  top: 10px;
+  right: 280px;
+  z-index: 1000;
+  background: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+#timestampContainer strong {
+  margin-right: 6px;
+}
+
+#searchContainer {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  background: white;
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  max-height: 260px;
+  width: 260px;
+  overflow: hidden;
+  font-size: 12px;
+}
+
+#nodeSearch {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+#searchResults {
+  max-height: 210px;
+  overflow-y: auto;
+}
+
+.search-result {
+  padding: 3px 4px;
+  cursor: pointer;
+  border-radius: 3px;
+  border-bottom: 1px solid #eee;
+}
+
+.search-result:hover {
+  background: #f0f0f0;
+}
+
+#offlineContainer {
+  position: absolute;
+  bottom: 30px;
+  left: 10px;
+  z-index: 1000;
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  max-height: 400px;
+  width: 280px;
+  overflow: hidden;
+  font-size: 12px;
+}
+
+#offlineContainer h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: bold;
+  color: #d32f2f;
+}
+
+#offlineList {
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.offline-item {
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 2px;
+}
+
+.offline-item:hover {
+  background: #ffebee;
+}
+
+.offline-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.offline-id {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}
+
+#legend {
+  position: absolute;
+  bottom: 30px;
+  right: 10px;
+  z-index: 1000;
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+#legend h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.legend-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: white;
+}
+
+.legend-icon.purple { background-color: #cf51b6; }
+.legend-icon.pink   { background-color: #ff91e8; }
+.legend-icon.blue   { background-color: #38a9dc; }
+.legend-icon.green  { background-color: #71af26; }

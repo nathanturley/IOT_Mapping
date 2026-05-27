@@ -1,12 +1,12 @@
-name: Build routes map
+name: Build and deploy routes map
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # every 15 minutes (UTC)
-  workflow_dispatch: {}       # allow manual runs from Actions tab
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
 
 permissions:
-  contents: write             # allow pushing changes back to the repo
+  contents: write
 
 jobs:
   build:
@@ -16,18 +16,13 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
 
-      - name: Check out data from private repo
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.DATA_REPO_PAT }}
-          path: data
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
-      - name: Install Chrome and chromedriver
+      - name: Install Chrome
         run: |
           wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
           sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
@@ -35,8 +30,7 @@ jobs:
           sudo apt-get install -y google-chrome-stable
 
       - name: Set Chrome environment variables
-        run: |
-          echo "CHROME_BIN=/usr/bin/google-chrome" >> $GITHUB_ENV
+        run: echo "CHROME_BIN=/usr/bin/google-chrome" >> $GITHUB_ENV
 
       - name: Install Python dependencies
         run: |
@@ -45,51 +39,43 @@ jobs:
 
       - name: Download CSV files from private repo
         run: |
-          # Download CSV files using raw.githubusercontent.com
-          # Replace YOUR_USERNAME and YOUR_PRIVATE_REPO with your actual values
           PRIVATE_REPO="nathanturley/IOT_Mapping_Data"
           BRANCH="main"
-          
+
           curl -H "Authorization: token ${{ secrets.DATA_REPO_PAT }}" \
             -H "Accept: application/vnd.github.v3.raw" \
             -L "https://api.github.com/repos/$PRIVATE_REPO/contents/paths.csv?ref=$BRANCH" \
             -o paths.csv
-          
+
           curl -H "Authorization: token ${{ secrets.DATA_REPO_PAT }}" \
             -H "Accept: application/vnd.github.v3.raw" \
             -L "https://api.github.com/repos/$PRIVATE_REPO/contents/devices.csv?ref=$BRANCH" \
             -o devices.csv
-          
+
           curl -H "Authorization: token ${{ secrets.DATA_REPO_PAT }}" \
             -H "Accept: application/vnd.github.v3.raw" \
             -L "https://api.github.com/repos/$PRIVATE_REPO/contents/labels.csv?ref=$BRANCH" \
             -o labels.csv
-          
+
           echo "CSV files downloaded successfully"
           ls -lh *.csv
 
-      - name: Run main script to generate routes_map.html
+      - name: Generate map
         env:
           MAP_PASSWORD: ${{ secrets.MAP_PASSWORD }}
+          PYTHONPATH: src
+          CI: "true"
         run: |
-          python map_paths_v2.py \
+          python -m iot_mapping \
             --paths paths.csv \
             --devices devices.csv \
             --labels labels.csv \
-            --out routes_map.html \
+            --out output/routes_map.html \
             --password "$MAP_PASSWORD"
 
-      - name: Commit and push routes_map.html
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          git add routes_map.html
-          
-          # Only commit and push if there are changes
-          if [[ $(git diff --staged) ]]; then
-            git commit -m "Update routes_map.html [skip ci]"
-            git push
-          else
-            echo "No changes to routes_map.html"
-          fi
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          publish_branch: gh-pages
