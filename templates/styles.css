@@ -164,7 +164,7 @@
 
 #offlineContainer {
   position: absolute;
-  bottom: 30px;
+  bottom: 50px;
   left: 10px;
   z-index: 1000;
   background: white;
@@ -175,6 +175,8 @@
   width: 280px;
   overflow: hidden;
   font-size: 12px;
+  display: flex;
+  flex-direction: column;
 }
 
 #offlineContainer h4 {
@@ -185,7 +187,8 @@
 }
 
 #offlineList {
-  max-height: 380px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
 }
 

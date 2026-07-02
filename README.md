@@ -27,7 +27,7 @@ templates/             Frontend files injected into the generated HTML
 
 ```bash
 python -m venv venv
-source venv/bin/activate        # or venv\Scripts\activate on Windows
+venv\Scripts\activate        # or source venv/bin/activate on linux
 pip install -r requirements.txt
 ```
 
