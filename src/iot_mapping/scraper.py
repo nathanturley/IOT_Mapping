@@ -23,7 +23,7 @@ from iot_mapping.config import THINGSBOARD_DASHBOARD_URL
 
 logger = logging.getLogger(__name__)
 
-MAX_RETRIES = 2
+MAX_RETRIES = 3
 
 
 def get_offline_nodes(

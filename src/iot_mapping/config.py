@@ -18,8 +18,8 @@ DEFAULT_ZOOM = 9
 
 # ThingsBoard dashboard is JS-rendered, so the scraper must wait for it to load.
 # CI environments are slower, so they get a longer wait.
-CI_SCRAPER_WAIT = 10
-LOCAL_SCRAPER_WAIT = 5
+CI_SCRAPER_WAIT = 20
+LOCAL_SCRAPER_WAIT = 10
 
 # FontAwesome icon + Folium color for each device type.
 # The key is matched as a substring of the device's Type field (case-insensitive).
