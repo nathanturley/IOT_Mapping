@@ -321,8 +321,9 @@
 }
 
 #pathsList {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
+  max-height: 268px;  /* ~10 rows, then scroll */
   overflow-y: auto;
   padding: 4px;
 }
