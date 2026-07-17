@@ -261,14 +261,14 @@
 
 #pathsPanel {
   position: absolute;
-  top: 90px;
-  left: 10px;
+  top: 90px;           /* below the zoom control + logout button */
+  left: 10px;          /* same left edge as the Offline Nodes panel below */
   z-index: 1000;
   background: white;
   border-radius: 4px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   width: 260px;
-  max-height: calc(100vh - 140px);
+  max-height: calc(100vh - 550px);  /* never grows into the Offline Nodes panel */
   font-size: 12px;
   display: flex;
   flex-direction: column;
@@ -284,13 +284,21 @@
   flex: 0 0 auto;
 }
 
-#pathsTitle {
+#pathsHeaderTitle {
   font-weight: bold;
+  font-size: 13px;
   color: #333;
-  margin-right: 6px;
+}
+
+/* Selected-node subtitle (device name + path count) */
+#pathsTitle {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  color: #555;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 #pathsButtons {
@@ -316,7 +324,7 @@
   display: none;
 }
 
-#pathsPanel.collapsed #pathsHeader {
+#pathsPanel.collapsed #pathsTitle {
   border-bottom: none;
 }
 
@@ -367,6 +375,7 @@
 
 .path-name {
   flex: 1 1 auto;
+  min-width: 0;  /* allow flex item to shrink so ellipsis works */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
