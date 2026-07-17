@@ -261,14 +261,14 @@
 
 #pathsPanel {
   position: absolute;
-  top: 48px;
+  top: 90px;
   left: 10px;
   z-index: 1000;
   background: white;
   border-radius: 4px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   width: 260px;
-  max-height: 360px;
+  max-height: calc(100vh - 140px);
   font-size: 12px;
   display: flex;
   flex-direction: column;
