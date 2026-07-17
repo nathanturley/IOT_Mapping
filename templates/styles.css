@@ -256,3 +256,135 @@
 .legend-icon.pink   { background-color: #ff91e8; }
 .legend-icon.blue   { background-color: #38a9dc; }
 .legend-icon.green  { background-color: #71af26; }
+
+/* --- Paths panel (click a node to see its paths + counts) --- */
+
+#pathsPanel {
+  position: absolute;
+  top: 48px;
+  left: 10px;
+  z-index: 1000;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  width: 260px;
+  max-height: 360px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#pathsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid #eee;
+  flex: 0 0 auto;
+}
+
+#pathsTitle {
+  font-weight: bold;
+  color: #333;
+  margin-right: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#pathsButtons {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+#pathsButtons button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  font-size: 13px;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+#pathsButtons button:hover {
+  color: #000;
+}
+
+#pathsPanel.collapsed #pathsList {
+  display: none;
+}
+
+#pathsPanel.collapsed #pathsHeader {
+  border-bottom: none;
+}
+
+#pathsList {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.path-row {
+  display: flex;
+  align-items: center;
+  padding: 5px 6px;
+  cursor: pointer;
+  border-radius: 3px;
+  border-bottom: 1px solid #eee;
+}
+
+.path-row:hover {
+  background: #f0f0f0;
+}
+
+.path-row.selected {
+  background: #e3f2fd;
+}
+
+.path-row.offline {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.path-row.offline:hover {
+  background: none;
+}
+
+.path-arrow {
+  flex: 0 0 auto;
+  width: 16px;
+  text-align: center;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+.path-arrow.out { color: #3388ff; }
+.path-arrow.in  { color: #999; }
+
+.path-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #333;
+}
+
+.path-count {
+  flex: 0 0 auto;
+  margin-left: 6px;
+  min-width: 20px;
+  text-align: center;
+  background: #eee;
+  color: #333;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-weight: 600;
+}
+
+.paths-empty {
+  color: #999;
+  padding: 8px;
+}

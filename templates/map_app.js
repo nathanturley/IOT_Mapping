@@ -181,6 +181,7 @@ function initializeMap() {
     line.baseWeight = w;
     line.fromId = e.frm;
     line.toId = e.to;
+    line.count = e.count;
     line.isOfflineEdge = isOfflineEdge;
 
     allEdges.push(line);
@@ -197,7 +198,9 @@ function initializeMap() {
   // --- Connect Folium markers to our click handler ---
   // Folium markers don't carry custom data, so we map lat/lng back to device ID
   var coordToDeviceId = {};
+  var idToDevice = {};  // ID_upper -> device (for path panel neighbour names)
   devices.forEach(function (d) {
+    idToDevice[d.ID_upper] = d;
     if (d.Latitude && d.Longitude) {
       var key = d.Latitude.toFixed(6) + "," + d.Longitude.toFixed(6);
       coordToDeviceId[key] = d.ID_upper;
@@ -215,19 +218,138 @@ function initializeMap() {
     }
   });
 
-  // --- Edge highlighting (click a device to see its connections) ---
+  // --- Edge highlighting + paths panel (click a device to see its connections) ---
 
-  var selectedId = null;
+  var selectedId = null;         // currently selected device
+  var selectedRowLine = null;    // single edge isolated via a path-row click
 
-  function resetHighlight() {
+  var pathsPanel = document.getElementById("pathsPanel");
+  var pathsTitle = document.getElementById("pathsTitle");
+  var pathsList = document.getElementById("pathsList");
+  var pathsCollapseBtn = document.getElementById("pathsCollapseBtn");
+  var pathsCloseBtn = document.getElementById("pathsCloseBtn");
+
+  /** Reset every edge back to its default blue/dim style. */
+  function styleEdgesDefault(dimUnselected) {
     allEdges.forEach(function (line) {
       line.setStyle({
         color: "#3388ff",
-        opacity: line.isOfflineEdge ? 0 : 0.5,
+        opacity: line.isOfflineEdge ? 0 : (dimUnselected ? 0.2 : 0.5),
         weight: line.baseWeight,
       });
     });
+  }
+
+  /** Black-highlight every (online) edge connected to a node — the full node view. */
+  function styleNodeEdges(idUpper) {
+    (edgesByNode[idUpper] || []).forEach(function (line) {
+      if (line.isOfflineEdge) return;  // offline edges stay hidden
+      line.setStyle({ color: "#000000", opacity: 0.9, weight: line.baseWeight });
+    });
+  }
+
+  function displayName(dev, fallbackId) {
+    if (dev && dev.DeviceName) return dev.DeviceName;
+    if (dev && dev.ID) return dev.ID;
+    return fallbackId;
+  }
+
+  function resetHighlight() {
+    styleEdgesDefault(false);
     selectedId = null;
+    selectedRowLine = null;
+    pathsPanel.style.display = "none";
+    pathsList.innerHTML = "";
+  }
+
+  /** Return from a single-edge isolation to the full node highlight. */
+  function clearRowIsolation() {
+    selectedRowLine = null;
+    styleEdgesDefault(false);
+    if (selectedId) styleNodeEdges(selectedId);
+    pathsList.querySelectorAll(".path-row.selected").forEach(function (r) {
+      r.classList.remove("selected");
+    });
+  }
+
+  /** Isolate one edge on the map: dim all others, black just this one. */
+  function isolateEdge(line, rowEl) {
+    // Clicking the same row again returns to the full node view
+    if (selectedRowLine === line) {
+      clearRowIsolation();
+      return;
+    }
+    styleEdgesDefault(true);
+    line.setStyle({ color: "#000000", opacity: 0.95, weight: line.baseWeight + 1 });
+    selectedRowLine = line;
+
+    pathsList.querySelectorAll(".path-row.selected").forEach(function (r) {
+      r.classList.remove("selected");
+    });
+    rowEl.classList.add("selected");
+  }
+
+  /** Populate and show the paths box for a selected device. */
+  function renderPathsPanel(idUpper) {
+    var lines = edgesByNode[idUpper] || [];
+
+    // One descriptor per connected edge: direction, neighbour, count
+    var rows = lines.map(function (line) {
+      var outgoing = (line.fromId === idUpper);
+      var otherId = outgoing ? line.toId : line.fromId;
+      return {
+        line: line,
+        outgoing: outgoing,
+        name: displayName(idToDevice[otherId], otherId),
+        count: line.count || 0,
+        offline: line.isOfflineEdge,
+      };
+    });
+    rows.sort(function (a, b) { return b.count - a.count; });
+
+    pathsTitle.textContent =
+      displayName(idToDevice[idUpper], idUpper) + "  •  " + rows.length +
+      (rows.length === 1 ? " path" : " paths");
+
+    pathsList.innerHTML = "";
+    if (rows.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "paths-empty";
+      empty.textContent = "No paths for this node";
+      pathsList.appendChild(empty);
+    } else {
+      rows.forEach(function (r) {
+        var row = document.createElement("div");
+        row.className = "path-row" + (r.offline ? " offline" : "");
+
+        var arrow = document.createElement("span");
+        arrow.className = "path-arrow " + (r.outgoing ? "out" : "in");
+        arrow.textContent = r.outgoing ? "→" : "←";
+
+        var nameSpan = document.createElement("span");
+        nameSpan.className = "path-name";
+        nameSpan.textContent = r.name;
+
+        var badge = document.createElement("span");
+        badge.className = "path-count";
+        badge.textContent = r.count;
+
+        row.appendChild(arrow);
+        row.appendChild(nameSpan);
+        row.appendChild(badge);
+
+        // Offline edges stay hidden on the map, so their rows aren't clickable
+        if (!r.offline) {
+          row.onclick = function () { isolateEdge(r.line, row); };
+        }
+
+        pathsList.appendChild(row);
+      });
+    }
+
+    pathsPanel.classList.remove("collapsed");
+    if (pathsCollapseBtn) pathsCollapseBtn.textContent = "▾";
+    pathsPanel.style.display = "block";
   }
 
   function highlightDevice(idUpper) {
@@ -240,11 +362,19 @@ function initializeMap() {
     resetHighlight();
     selectedId = idUpper;
 
-    // Highlight all edges connected to this device
-    var lines = edgesByNode[idUpper] || [];
-    lines.forEach(function (line) {
-      line.setStyle({ color: "#000000", opacity: 0.9 });
-    });
+    styleNodeEdges(idUpper);
+    renderPathsPanel(idUpper);
+  }
+
+  // Collapse chevron hides the list but keeps the node selected; ✕ closes fully.
+  if (pathsCollapseBtn) {
+    pathsCollapseBtn.onclick = function () {
+      var collapsed = pathsPanel.classList.toggle("collapsed");
+      pathsCollapseBtn.textContent = collapsed ? "▸" : "▾";
+    };
+  }
+  if (pathsCloseBtn) {
+    pathsCloseBtn.onclick = function () { resetHighlight(); };
   }
 
   function focusOnDevice(idUpper) {
